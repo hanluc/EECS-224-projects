@@ -25,7 +25,29 @@
  *   partitioned output. It also returns the index n_le such that
  *   (A[0:(k-1)] == A_le) and (A[k:(N-1)] == A_gt).
  */
-int partition (keytype pivot, int N, keytype* A)
+
+int paraPartition(keytype pivot, int N, keytype* A)
+{
+	int k = 0;
+
+		for (int i = 0; i < N; ++i) {
+
+	    /* Invariant:
+ 			** - A[0:(k-1)] <= pivot; and
+ 			* - A[k:(i-1)] > pivot
+		  */
+		  const int ai = A[i];
+	  	if (ai <= pivot) {
+	    /* Swap A[i] and A[k] */
+	      int ak = A[k];
+	    	A[k++] = ai;
+	    	 A[i] = ak;
+	  	 }
+		}
+		return k;
+}
+
+int partition (keytype pivot, int N, keytype* A, keytype* B)
 {
   int k = 0;
 
@@ -52,30 +74,34 @@ int partition (keytype pivot, int N, keytype* A)
   }
 
 	/* 1. create 2 arrays */
-	keytype **lower = (keytype **)malloc(r * sizeof(keytype*));
-	keytype **higher = (keytype **)malloc(r * sizeof(keytype*));
-	for ( int i=0; i < r; i ++)
-	{
-		lower[i] = (keytype*)malloc((c+1)*sizeof(keytype));  //add 1 more square infront of array to store count
-		higher[i] = (keytype*)malloc((c+1)*sizeof(keytype));
-	}
+	//keytype **lower = (keytype **)malloc(r * sizeof(keytype*));
+	//keytype **higher = (keytype **)malloc(r * sizeof(keytype*));
+	//for ( int i=0; i < r; i ++)
+	//{
+	//	lower[i] = (keytype*)malloc((c+1)*sizeof(keytype));  //add 1 more square infront of array to store count
+	//	higher[i] = (keytype*)malloc((c+1)*sizeof(keytype));
+	//}
 
 	/* 2. do the partition */
-	#pragma omp parallel for shared(lower, higher) private(i)   //[TODO: find if we need to share other vars]
+	int lowPos[NUM_PROC];
+	#pragma omp parallel for private(i)   //[TODO: find if we need to share other vars]
 	for(int i = 0; i < r; i++)
 	{
-		int lowIndex = 1;
-		int highIndex = 1;
-		for (int j = i * c; j < (i+1)*c && j < N; j++)
-		{
-			if(A[j] < pivot)
-				lower[i][lowIndex++] = A[j];
-			else if(A[j] > pivot)
-				higher[i][highIndex++] = A[j];
-		}
+		int count = (i+1)*c > N ? (N - i*c):c;
+		int start = i*c;
+		lowPos[i] = paraPartition(pivot, count, A+start); 
+		//int lowIndex = 1;
+		//int highIndex = 1;
+		//for (int j = i * c; j < (i+1)*c && j < N; j++)
+		//{
+		//	if(A[j] < pivot)
+		//		lower[i][lowIndex++] = A[j];
+		//	else if(A[j] > pivot)
+		//		higher[i][highIndex++] = A[j];
+		//}
 
-		lower[i][0] = lowIndex - 1;
-		higher[i][0] = highIndex - 1;
+		//lower[i][0] = lowIndex - 1;
+		//higher[i][0] = highIndex - 1;
 	}
 
 	/* 3 count the boundary for each processor */  //[TODO: parallel it]
