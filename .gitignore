@@ -1,0 +1,6 @@
+#compiled source
+*.o
+
+#segmentation fault
+core.*
+
