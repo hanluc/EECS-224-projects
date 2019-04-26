@@ -1,0 +1,15 @@
+g++  -O3 -g -o driver.o -c driver.cc
+g++  -O3 -g -o sort.o -c sort.cc
+g++  -O3 -g -o parallel-qsort.o -c parallel-qsort.cc
+g++ -O3 -g -o quicksort driver.o sort.o parallel-qsort.o
+Timer: gettimeofday
+Timer resolution: ~ 1 us (?)
+
+N == 1000
+
+Quicksort: 0.000259 seconds ==> 3.861 million keys per second
+	(Array is sorted.)
+My sort: 9.4e-05 seconds ==> 10.6383 million keys per second
+	(Array is sorted.)
+	(Arrays are equal.)
+

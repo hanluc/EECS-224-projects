@@ -1,0 +1,14 @@
+
+ Performance counter stats for './quicksort 1000':
+
+   <not supported>      task-clock                                                  
+   <not supported>      context-switches                                            
+   <not supported>      cpu-migrations                                              
+   <not supported>      page-faults                                                 
+   <not supported>      cycles                                                      
+   <not supported>      instructions                                                
+   <not supported>      branches                                                    
+   <not supported>      branch-misses                                               
+
+       0.021360551 seconds time elapsed
+
