@@ -1,4 +1,4 @@
-#!/bin/bahs
+#!/bin/bash
 #$ -N qsort
 #$ -q class 
 #$ -pe openmp 8-64
