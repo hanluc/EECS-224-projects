@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cstring>
 
 #include <omp.h>
 
@@ -49,119 +50,73 @@ int paraPartition(keytype pivot, int N, keytype* A)
 
 int partition (keytype pivot, int N, keytype* A, keytype* B)
 {
-  int k = 0;
-
 	  /* 0. if N < num of processors do serial partition*/
   int r = NUM_PROC;
-  int c = N / NUM_PROC + ((N%NUM_PROC==0) ? 0 : 1);
+  int c = N / NUM_PROC;
+	int leftover = N % NUM_PROC;
   if(N < NUM_PROC)
   {
-		for (int i = 0; i < N; ++i) {
-
-	    /* Invariant:
- 			** - A[0:(k-1)] <= pivot; and
- 			* - A[k:(i-1)] > pivot
-		  */
-		  const int ai = A[i];
-	  	if (ai <= pivot) {
-	    /* Swap A[i] and A[k] */
-	      int ak = A[k];
-	    	A[k++] = ai;
-	    	 A[i] = ak;
-	  	 }
-		}
-		return k;
+		paraPartition(pivot, N, A);
   }
 
-	/* 1. create 2 arrays */
-	//keytype **lower = (keytype **)malloc(r * sizeof(keytype*));
-	//keytype **higher = (keytype **)malloc(r * sizeof(keytype*));
-	//for ( int i=0; i < r; i ++)
-	//{
-	//	lower[i] = (keytype*)malloc((c+1)*sizeof(keytype));  //add 1 more square infront of array to store count
-	//	higher[i] = (keytype*)malloc((c+1)*sizeof(keytype));
-	//}
-
 	/* 2. do the partition */
-	int lowPos[NUM_PROC];
+	keytype lowPos[NUM_PROC];  //store k's :lowest idx of greater num
 	#pragma omp parallel for private(i)   //[TODO: find if we need to share other vars]
 	for(int i = 0; i < r; i++)
 	{
-		int count = (i+1)*c > N ? (N - i*c):c;
-		int start = i*c;
-		lowPos[i] = paraPartition(pivot, count, A+start); 
-		//int lowIndex = 1;
-		//int highIndex = 1;
-		//for (int j = i * c; j < (i+1)*c && j < N; j++)
-		//{
-		//	if(A[j] < pivot)
-		//		lower[i][lowIndex++] = A[j];
-		//	else if(A[j] > pivot)
-		//		higher[i][highIndex++] = A[j];
-		//}
-
-		//lower[i][0] = lowIndex - 1;
-		//higher[i][0] = highIndex - 1;
-	}
+		keytype count = i < leftover ? c+1:c ; //
+		keytype start = i < leftover ? i * (c+1) : (leftover *(c+1) + (i - leftover) * c); // if leftover = 5 = i; count = c; start = 5*(c+1) 
+		lowPos[i] = paraPartition(pivot, count, A+start);
+	} 
 
 	/* 3 count the boundary for each processor */  //[TODO: parallel it]
-	keytype* lowStart = (keytype*) malloc(r * sizeof(keytype));
-	keytype* highTail = (keytype*) malloc(r*sizeof(keytype));
-	keytype curLow = 0;
-	keytype curHigh = N-1;
-	for(int i = 0 ; i < r; i++)
+	int lowStart[NUM_PROC];
+	int highStart[NUM_PROC];
+	int lowsum = 0;
+	#pragma omp parallel for
+	for( int i = 0; i < NUM_PROC; i++)
 	{
-		lowStart[i] = curLow;
-		highTail[r - i - 1] = curHigh;
-
-		curLow += lower[i][0];
-		curHigh -= higher[r - i - 1][0];
+		lowStart[i] = lowsum;
+		lowsum += lowPos[i];   // the final sum would be start of greater elements
+	}
+	int highsum = lowsum;
+	#pragma parallel for
+	for( int i = 0; i < NUM_PROC; i++)
+	{
+		highStart[i] = highsum;
+		highsum += (i < leftover ? c+1 : c)  - lowPos[i];   // count number of greater elements of each processor's area.
 	}
 
-	/* 4. fill back A*/
-	int subgap = (curHigh - curLow + 1) / r + ((curHigh - curLow + 1)%r == 0? 0:1);
-
-	#pragma omp parallel shared(lowStart, highTail) private(i)
+	/* 4. fill data into B*/
+	#pragma omp parallel private(i)
 	for(int i = 0; i < r ; i++)
 	{
 		
-		for(int j = 0; j < lower[i][0] ; j++ )
+		for(int j = 0; j < lowPos[i] ; j++ )
 		{
-			A[j + lowStart[i]] = lower[i][j + 1];  //skip lower[i][0]
+			B[j + lowStart[i]] = A[i*c + j];  
 		}
-		for(int j = 0; j < higher[i][0]; j++)
+		for(int j = 0; j < (i < leftover ? c+1 : c) - lowPos[i] ; j++)
 		{
-			A[highTail[i] - j] = higher[i][higher[i][0] - j];  // omit higher[i][0]
-		}
-
-		/* gap */
-		if(curHigh >= curLow)
-		{
-			for(int j = i*subgap + curLow ; j < (i+1)*subgap + curLow && j <= curHigh; j++)
-				A[j] = pivot;
+			keytype start = i < leftover ? i * (c+1) : (leftover *(c+1) + (i - leftover) * c);
+			B[highStart[i] + j] = A[ start + lowPos[i] + j];  
 		}
 	}
 
-	/* free the spaces */
-	for ( int i=0; i < r; i ++)
+	/* move data back to A*/
+	#pragma omp parallel private(i)
+	for ( int i = 0; i < r; i++)
 	{
-		free(lower[i]); 
-		free(higher[i]);
+		int count = (i+1)*c > N ? (N - i*c) : c; 
+		std::memcpy(A+i*c, B+i*c, count);
 	}
-	
-	free(lower);
-	free(higher);
-	free(lowStart);
-	free(highTail);
-
-
-  	return curHigh + 1;  
+  	return lowsum;  
 
 }
 
-void quickSort (int N, keytype* A)
+void quickSort (int N, keytype* A, keytype* B)
 {
-  const int G = 1024; /* base case size, a tuning parameter */
+  const int G = 1024; /* base :wqcase size, a tuning parameter */
   if (N < G)
     sequentialSort (N, A);
   else {
@@ -171,16 +126,16 @@ void quickSort (int N, keytype* A)
     // Partition around the pivot. Upon completion, n_less, n_equal,
     // and n_greater should each be the number of keys less than,
     // equal to, or greater than the pivot, respectively. Moreover, the array
-    int n_le = partition (pivot, N, A);
+    int n_le = partition (pivot, N, A, B);
 		#pragma omp parallel sections
 		{
 			#pragma omp section
 			{
-    		quickSort (n_le, A);
+    		quickSort (n_le, A, B);
 			}
 			#pragma omp section
 			{
-    		quickSort (N-n_le, A + n_le);
+    		quickSort (N-n_le, A + n_le, B + n_le);
 			}
 		}
   }
@@ -188,7 +143,9 @@ void quickSort (int N, keytype* A)
 
 void mySort (int N, keytype* A)
 {
-  quickSort (N, A);
+	keytype* B = (keytype*)malloc(N*sizeof(keytype));
+  quickSort (N, A, B);
+	free(B);
 }
 
 /* eof */
