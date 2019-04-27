@@ -1,0 +1,72 @@
+Algorithm
+  1.suppose the number of process is p and the numeber of elements in the array is N
+  2.assign each process a consecutive N/p elements 
+  3.choose a element as pivot and broadcast it to p process, which takes O(logN)  time 
+  4.parallelly do local rearrangement, swap the elements smaller than pivot to 
+  the front of each segment, elements larger than pivot to the end of each 
+  segment, which will take O(N/p) time
+  5.keep track of the number of smaller elements in a p-length array
+  6.calculate the start posion of smaller and larger elements of each segment by  doing prefix sum parallel, which takes O(log  N) time and O(2*p) space    
+  7.put rearranged segments to an auxiliary size-N array by referring prefix sum  arrays, which takes O(N/p) time
+
+
+Time Complexity and Work Analysis 
+  D(n) = O((N/p) * log(N/p)) + O((N/p) * logp)
+  W(n) = O(N * logN)
+  auxiliary storage S = N + 3 * p
+
+
+Performance
+  number of process = 8
+  Part 1 - after parallelizing two recursive calls
+    N = 10000
+    serial   0.00138 s ==> 7.24638M keys/s
+    parallel 0.00106 s ==> 9.43396M keys/s
+    N = 100000
+    serial   0.014654s ==> 6.82408M keys/s
+    parallel 0.012158s ==> 8.22504M keys/s
+    N = 1000000
+    serial   0.174923s ==> 5.7168 M keys/s
+    parallel 0.137372s ==> 7.2795 M keys/s
+    N = 10000000
+    serial   2.14754 s ==> 4.6565 M  keys/s
+    parallel 1.61317 s ==> 6.19896M keys/s
+
+  Part 2 - after parallelizing partition
+    N = 10000
+    serial   0.001376s ==> 7.26744M keys/s
+    parallel 0.001178s ==> 8.48896M keys/s
+    N = 100000
+    serial   0.018175s ==> 5.50206M keys/s
+    parallel 0.013965s ==> 7.16538M keys/s
+    N = 1000000
+    serial   0.175867s ==> 5.68612M keys/s
+    parallel 0.17791 s ==> 5.62082M keys/s
+    N = 10000000
+    serial   2.1359  s ==> 4.68188M keys/s
+    parallel 2.59649 s ==> 3.85135M keys/s
+
+
+Analysis
+  After parallelising two recursive calls, the executing time has been reduced by 21.5% on 
+  average. This is due to the parallel two recursive calls.
+
+  After parallelizing partition part by assigning work to p process, for smaller cases such as
+  N = 10000, 100000, executing time has been reduced by 20% on average. However, when 
+  N = 1000000, 10000000, parallelizing is no better or even worse than serial, this is probably due to the relatively long 
+  communication time between two nodes using MPI.
+  
+  When N = 10000, 100000, parallelizing partition reduced executing time to 1/10 of the 
+  executing time of parallelizing two recursive calls. However, when N = 1000000, 10000000,
+  parallelizing partition is no better than parallelizing two recursive calls, this is probably due to the copying of the 
+  whole array overhead and communication with MPI overhead.
+
+
+Work Partition
+  Hanlu  Chen 1. locally rearrange the array assigned to each process
+              2. determine the locations in the global rearranged array
+              3. optimizing storage and time performance
+
+  Mengqi Wang 1. determine and broadcast the pivot
+              2. perform the global rearrangement  
+              3. test and analyze performance
