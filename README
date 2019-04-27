@@ -1,4 +1,5 @@
 Algorithm
+
   1.suppose the number of process is p and the numeber of elements in the array is N
   2.assign each process a consecutive N/p elements 
   3.choose a element as pivot and broadcast it to p process, which takes O(logN)  time 
@@ -11,13 +12,16 @@ Algorithm
 
 
 Time Complexity and Work Analysis 
+  
   D(n) = O((N/p) * log(N/p)) + O((N/p) * logp)
   W(n) = O(N * logN)
   auxiliary storage S = N + 3 * p
 
 
 Performance
+  
   number of process = 8
+  
   Part 1 - after parallelizing two recursive calls
     N = 10000
     serial   0.00138 s ==> 7.24638M keys/s
@@ -48,6 +52,7 @@ Performance
 
 
 Analysis
+  
   After parallelising two recursive calls, the executing time has been reduced by 21.5% on 
   average. This is due to the parallel two recursive calls.
 
@@ -63,6 +68,7 @@ Analysis
 
 
 Work Partition
+
   Hanlu  Chen 1. locally rearrange the array assigned to each process
               2. determine the locations in the global rearranged array
               3. optimizing storage and time performance
