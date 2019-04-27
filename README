@@ -69,10 +69,12 @@ Analysis
 
 Work Partition
 
-  Hanlu  Chen 1. locally rearrange the array assigned to each process
+  Hanlu  Chen 54086716
+              1. locally rearrange the array assigned to each process
               2. determine the locations in the global rearranged array
               3. optimizing storage and time performance
 
-  Mengqi Wang 1. determine and broadcast the pivot
+  Mengqi Wang 55967217
+              1. determine and broadcast the pivot
               2. perform the global rearrangement  
               3. test and analyze performance
